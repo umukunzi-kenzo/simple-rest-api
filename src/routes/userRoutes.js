@@ -4,8 +4,8 @@ import User from "../models/users.js"
 
 import { protect, authorizeAdmin} from "../middlewares/authMiddleware.js";
 
-import {registerUser, loginUser, updateUserProfile } from "../controllers/userController.js";
-import { syncIndexes } from "mongoose";
+import {registerUser, loginUser, updateUserProfile,deleteUserProfile, deleteUserByAdmin, updateUserByAdmin  } from "../controllers/userController.js";
+
 
 const router = express.Router();
 
@@ -30,7 +30,19 @@ router.get("/all-users", protect, authorizeAdmin, async (req, res) => {
     res.json(users);
 });
 
+//update user route
+router.put("/update-profile", protect, updateUserProfile );
 
-router.put("/update-profile", protect, updateUserProfile);
+
+// account deletion  
+router.delete("/profile",protect, deleteUserProfile); 
+
+
+// delete user by admin
+router.delete("/:id", protect, authorizeAdmin, deleteUserByAdmin);
+
+// uodate user by admin
+router.put("/:id",protect,authorizeAdmin,updateUserByAdmin)
+
 
 export default router;

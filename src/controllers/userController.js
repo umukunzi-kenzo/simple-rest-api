@@ -110,17 +110,148 @@ export const loginUser = async (req, res) => {
    }
 }
 
+
 //update user controller
 export const updateUserProfile = async (req,res) => {
    try {
-      const userId = rq.user.id;
+      
+      const userId = req.user.id;
+      const {username, email, password} = req.body;
+
+      // find user in db
+      const user = await User.findById(userId);
+
+      if(!user){
+         return res.status(404).json({ message: "user not found"});
+
+      }
+
+      // update user if feilds are provided
+      if(username) user.username = username;
+      if(email) user.email = email;
+
+      // hash paaword if provided;
+      if(password){
+         const salt = await bcrypt.genSalt(10);
+         user.password = await bcrypt.hash(password, salt);
+      }
+
+      // save updated user
+      const updatedUser = await  user.save();
+
+      // return  updated info with no password
+      res.status(200).json({
+         message: "profile updated",
+         id: updatedUser._id,
+         username: updatedUser.username,
+         email: updatedUser.email,
+         role: updatedUser.role,
+      });
       
       
    } catch (error) {
-      
+      console.error(error);
+      res.status(500).json({ message: "Se rver error"})
+   }
+}
+
+
+// delete logged-in user's own account
+export const  deleteUserProfile = async (req,res) => {
+
+   try {
+      const  userId = req.user.id;
+      const user = await User.findById(userId);
+
+      if(!user){
+         return res.status(404).json({ message: "User not found"});
+      }
+       // delete user
+      await User.findByIdAndDelete();
+
+      res.status(200).json({ message: "Your account has been deleted successfully"});
+
+   } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error "})
    }
 }
 
 
 
-export default { registerUser, loginUser,  }; 
+
+// admin deletes any user(but can not delete themselves)
+
+export const deleteUserByAdmin = async ( req, res) => {
+   try {
+      const userId = req.params.id;
+
+      //to prevent admin to delete themselves
+      if(req.user.id === userId) {
+         return res.status(400).json({ message: "Admin can not delete their own account"});
+
+
+         // check if user exist
+         const user = await User.findById(userId);
+
+        if(!user){
+         return res.status(404).json({ message: " User not found"});
+        }
+      }
+      //  delete user 
+      await User.findByIdAndDelete(userId);
+
+      res.status(200).json({ message: " user deleted successfully by admin"});
+   } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Server error"});
+   }
+};
+
+export const updateUserByAdmin = async(req, res) =>{
+   try {
+      
+      const userId = req.params.id;
+
+      const { username, email, role } = req.body;
+
+      const user = await User.findById(userId);
+
+      if(!user){
+         return res.status(404).json({ messsage: " User not found"});
+           };
+
+           //update feilds if only if provided
+             
+            user.username = username || user.username;
+            user.email = email || user.email;
+
+            //only allow valid roles
+            if(role && ["user", "admin"].includes(role)){
+               user.role = role;
+            };
+
+            //save updated user
+
+            const updatedUser = await user.save();
+            
+            res.status(200).json({ 
+               message: "user updated by admin successfully",
+               user: {
+                  id: updatedUser._id,
+                  username: updatedUser.username,
+                  email: updatedUser.email,
+                  role: updatedUser.role
+               }
+            });
+
+
+   } catch (error) {
+   console.error(error)
+   return res.status(500).json({ message: "Server error"})
+   }
+};
+
+
+
+export default { registerUser, loginUser, updateUserProfile, deleteUserProfile, deleteUserByAdmin, updateUserByAdmin }; 
